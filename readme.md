@@ -43,17 +43,20 @@ A RESTful API built with Express.js for user management with JWT authentication 
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd express2
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create a `.env` file in the root directory with the following variables:
+
 ```env
 PORT=3000
 NODE_ENV=development
@@ -63,18 +66,19 @@ JWT_EXPIRES_IN=7d
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port number | 3000 |
-| `NODE_ENV` | Environment (development/production) | development |
-| `JWT_SECRET` | Secret key for JWT signing | - |
-| `JWT_EXPIRES_IN` | JWT expiration time | 7d |
+| Variable         | Description                          | Default     |
+| ---------------- | ------------------------------------ | ----------- |
+| `PORT`           | Server port number                   | 3000        |
+| `NODE_ENV`       | Environment (development/production) | development |
+| `JWT_SECRET`     | Secret key for JWT signing           | -           |
+| `JWT_EXPIRES_IN` | JWT expiration time                  | 7d          |
 
 ## API Endpoints
 
 ### Public Endpoints
 
 #### Create User
+
 ```http
 POST /users
 Content-Type: application/json
@@ -87,6 +91,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -106,12 +111,14 @@ Content-Type: application/json
 ### Protected Endpoints (Admin Only)
 
 #### Get All Users
+
 ```http
 GET /users/profile
 Authorization: Bearer <token>
 ```
 
 #### Get User by ID
+
 ```http
 GET /users/:id
 Authorization: Bearer <token>
@@ -130,9 +137,11 @@ The token is returned when creating a new user via [`createUser`](controllers/us
 ## Middleware
 
 ### Authentication Middleware
+
 [`authenticateToken`](middlewares/authMiddleware.js) - Verifies JWT tokens for protected routes
 
 ### Role Middleware
+
 [`authorizeRole`](middlewares/roleMiddleware.js) - Checks user roles for authorization
 
 ## Error Handling
@@ -144,31 +153,35 @@ The API uses a centralized error handling mechanism via [`asyncHandler`](utils/e
 All API responses follow a standardized format using [`sendSuccessResponse`](utils/responseHandler.js) and [`sendErrorResponse`](utils/responseHandler.js) from [utils/responseHandler.js](utils/responseHandler.js):
 
 **Success Response:**
+
 ```json
 {
   "success": true,
   "message": "Operation successful",
-  "data": { }
+  "data": {}
 }
 ```
 
 **Error Response:**
+
 ```json
 {
   "success": false,
   "message": "Error message",
-  "error": { }
+  "error": {}
 }
 ```
 
 ## Running the Application
 
 ### Development Mode
+
 ```bash
 npm run dev
 ```
 
 ### Production Mode
+
 ```bash
 npm start
 ```
@@ -178,6 +191,7 @@ The server will start on `http://localhost:3000` (or the port specified in [.env
 ## Logging
 
 The application uses a custom logger ([utils/logger.js](utils/logger.js)) that provides different log levels:
+
 - `info` - General information
 - `debug` - Debug information
 - `error` - Error messages
@@ -192,7 +206,7 @@ The application uses a custom logger ([utils/logger.js](utils/logger.js)) that p
 
 ## Future Enhancements
 
-- [ ] Add database integration (MongoDB/PostgreSQL)
+- [/] Add database integration (MongoDB/PostgreSQL)
 - [ ] Implement password authentication
 - [ ] Add refresh token mechanism
 - [ ] Implement password reset functionality
