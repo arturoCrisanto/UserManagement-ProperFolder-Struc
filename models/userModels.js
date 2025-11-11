@@ -10,6 +10,7 @@ const users = [
     email: "alice@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "Admin",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -17,6 +18,7 @@ const users = [
     email: "bob@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "User",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -24,6 +26,7 @@ const users = [
     email: "charlie@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "User",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -31,6 +34,7 @@ const users = [
     email: "diana@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "Moderator",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -38,6 +42,7 @@ const users = [
     email: "evan@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "User",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -45,6 +50,7 @@ const users = [
     email: "fiona@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "Admin",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -52,6 +58,7 @@ const users = [
     email: "george@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "User",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -59,6 +66,7 @@ const users = [
     email: "hannah@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "User",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -66,6 +74,7 @@ const users = [
     email: "ivan@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "User",
+    refreshTokens: [],
   },
   {
     id: randomUUID(),
@@ -73,6 +82,7 @@ const users = [
     email: "jenny@example.com",
     password: bcrypt.hashSync("password123", saltRounds),
     role: "Moderator",
+    refreshTokens: [],
   },
 ];
 

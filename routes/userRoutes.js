@@ -6,6 +6,8 @@ import {
   createUser,
   getUserById,
   loginUser,
+  logoutUser,
+  refreshAccessToken,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -14,6 +16,8 @@ const router = express.Router();
 // Specific routes MUST come before parameterized routes
 router
   .post("/login", loginUser)
+  .post("/refresh", refreshAccessToken)
+  .post("/logout", logoutUser)
   .post("/", createUser)
   .get("/profile", authenticateToken, authorizeRole("Admin"), getAllUsers)
   .get("/:id", authenticateToken, authorizeRole("Admin"), getUserById);

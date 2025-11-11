@@ -5,9 +5,11 @@ A RESTful API built with Express.js for user management with JWT authentication,
 ## Features
 
 - User registration and authentication
-- JWT-based authentication
+- JWT-based authentication with access and refresh tokens
 - Role-based access control (RBAC)
 - Bcrypt password hashing
+- Token refresh mechanism
+- Secure logout functionality
 - Custom error handling
 - Structured logging
 - Standardized API responses
@@ -30,7 +32,9 @@ A RESTful API built with Express.js for user management with JWT authentication,
 ├── routes/
 │   └── userRoutes.js             # User route definitions
 └── utils/
+    ├── authHelper.js             # Authentication helper functions
     ├── errorHandler.js           # Error handling utilities
+    ├── jwt.js                    # JWT token generation and verification
     ├── logger.js                 # Logging configuration
     └── responseHandler.js        # Standardized response format
 ```
@@ -61,17 +65,21 @@ npm install
 PORT=3000
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRES_IN=7d
+JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
+JWT_REFRESH_EXPIRES_IN=30d
 SALT_ROUNDS=10
 ```
 
 ## Environment Variables
 
-| Variable         | Description                    | Default |
-| ---------------- | ------------------------------ | ------- |
-| `PORT`           | Server port number             | 3000    |
-| `JWT_SECRET`     | Secret key for JWT signing     | -       |
-| `JWT_EXPIRES_IN` | JWT expiration time            | 7d      |
-| `SALT_ROUNDS`    | Bcrypt salt rounds for hashing | 10      |
+| Variable                 | Description                          | Default |
+| ------------------------ | ------------------------------------ | ------- |
+| `PORT`                   | Server port number                   | 3000    |
+| `JWT_SECRET`             | Secret key for JWT signing           | -       |
+| `JWT_EXPIRES_IN`         | JWT access token expiration time     | 7d      |
+| `JWT_REFRESH_SECRET`     | Secret key for refresh token signing | -       |
+| `JWT_REFRESH_EXPIRES_IN` | JWT refresh token expiration time    | 30d     |
+| `SALT_ROUNDS`            | Bcrypt salt rounds for hashing       | 10      |
 
 ## API Endpoints
 
@@ -104,7 +112,8 @@ Content-Type: application/json
       "email": "john@example.com",
       "role": "User"
     },
-    "token": "jwt_token"
+    "accessToken": "jwt_access_token",
+    "refreshToken": "jwt_refresh_token"
   }
 }
 ```
@@ -128,8 +137,53 @@ Content-Type: application/json
   "success": true,
   "message": "Login successful",
   "data": {
-    "token": "jwt_token"
+    "accessToken": "jwt_access_token",
+    "refreshToken": "jwt_refresh_token"
   }
+}
+```
+
+#### Refresh Access Token
+
+```http
+POST /api/users/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "jwt_refresh_token"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new_jwt_access_token"
+  }
+}
+```
+
+#### Logout User
+
+```http
+POST /api/users/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "jwt_refresh_token"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Logout successful",
+  "data": null
 }
 ```
 
@@ -233,18 +287,25 @@ The application uses a custom logger that provides different log levels:
 - Never commit `.env` file to version control
 - Use HTTPS in production
 - Implement rate limiting for production use
-- Tokens expire after configured time period
+- Access tokens expire after configured time period (default: 7 days)
+- Refresh tokens expire after configured time period (default: 30 days)
+- Refresh tokens are stored per user and validated on each use
+- Tokens are invalidated on logout
 
 ## Future Enhancements
 
-- [ ] Add database integration (MongoDB/PostgreSQL)
+- [x] Add database integration (MongoDB/PostgreSQL)
 - [x] Implement password authentication
-- [ ] Add refresh token mechanism
+- [x] Add refresh token mechanism
 - [ ] Implement password reset functionality
 - [ ] Add input validation middleware
 - [ ] Add API documentation (Swagger/OpenAPI)
 - [ ] Add unit and integration tests
 - [ ] Implement rate limiting
+- [x] Implement JWT-based authentication
+- [x] Add role-based access control
+- [x] Implement logout functionality
+- [ ] Add email verification for new users
 
 ## License
 
