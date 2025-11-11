@@ -1,12 +1,13 @@
 # Express.js User Management API
 
-A RESTful API built with Express.js for user management with JWT authentication and role-based authorization.
+A RESTful API built with Express.js for user management with JWT authentication, role-based authorization, and bcrypt password hashing.
 
 ## Features
 
-- User CRUD operations
+- User registration and authentication
 - JWT-based authentication
 - Role-based access control (RBAC)
+- Bcrypt password hashing
 - Custom error handling
 - Structured logging
 - Standardized API responses
@@ -30,7 +31,6 @@ A RESTful API built with Express.js for user management with JWT authentication 
 │   └── userRoutes.js             # User route definitions
 └── utils/
     ├── errorHandler.js           # Error handling utilities
-    ├── jwt.js                    # JWT token utilities
     ├── logger.js                 # Logging configuration
     └── responseHandler.js        # Standardized response format
 ```
@@ -59,34 +59,35 @@ npm install
 
 ```env
 PORT=3000
-NODE_ENV=development
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRES_IN=7d
+SALT_ROUNDS=10
 ```
 
 ## Environment Variables
 
-| Variable         | Description                          | Default     |
-| ---------------- | ------------------------------------ | ----------- |
-| `PORT`           | Server port number                   | 3000        |
-| `NODE_ENV`       | Environment (development/production) | development |
-| `JWT_SECRET`     | Secret key for JWT signing           | -           |
-| `JWT_EXPIRES_IN` | JWT expiration time                  | 7d          |
+| Variable         | Description                    | Default |
+| ---------------- | ------------------------------ | ------- |
+| `PORT`           | Server port number             | 3000    |
+| `JWT_SECRET`     | Secret key for JWT signing     | -       |
+| `JWT_EXPIRES_IN` | JWT expiration time            | 7d      |
+| `SALT_ROUNDS`    | Bcrypt salt rounds for hashing | 10      |
 
 ## API Endpoints
 
 ### Public Endpoints
 
-#### Create User
+#### Register User
 
 ```http
-POST /users
+POST /api/users/
 Content-Type: application/json
 
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "role": "Admin"
+  "password": "password123",
+  "role": "User"
 }
 ```
 
@@ -101,8 +102,32 @@ Content-Type: application/json
       "id": "uuid",
       "name": "John Doe",
       "email": "john@example.com",
-      "role": "Admin"
+      "role": "User"
     },
+    "token": "jwt_token"
+  }
+}
+```
+
+#### Login User
+
+```http
+POST /api/users/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "password123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
     "token": "jwt_token"
   }
 }
@@ -113,16 +138,27 @@ Content-Type: application/json
 #### Get All Users
 
 ```http
-GET /users/profile
+GET /api/users/profile
 Authorization: Bearer <token>
 ```
 
 #### Get User by ID
 
 ```http
-GET /users/:id
+GET /api/users/:id
 Authorization: Bearer <token>
 ```
+
+## Default Test Users
+
+All users have password: `password123`
+
+| Email             | Role      |
+| ----------------- | --------- |
+| alice@example.com | Admin     |
+| bob@example.com   | User      |
+| diana@example.com | Moderator |
+| fiona@example.com | Admin     |
 
 ## Authentication
 
@@ -132,25 +168,25 @@ This API uses JWT (JSON Web Tokens) for authentication. Include the token in the
 Authorization: Bearer <your_jwt_token>
 ```
 
-The token is returned when creating a new user via [`createUser`](controllers/userController.js) in [controllers/userController.js](controllers/userController.js).
+Tokens are returned upon successful registration or login.
 
 ## Middleware
 
 ### Authentication Middleware
 
-[`authenticateToken`](middlewares/authMiddleware.js) - Verifies JWT tokens for protected routes
+`authenticateToken` - Verifies JWT tokens for protected routes
 
 ### Role Middleware
 
-[`authorizeRole`](middlewares/roleMiddleware.js) - Checks user roles for authorization
+`authorizeRole` - Checks user roles for authorization
 
 ## Error Handling
 
-The API uses a centralized error handling mechanism via [`asyncHandler`](utils/errorHandler.js) in [utils/errorHandler.js](utils/errorHandler.js). All errors are logged using the [`logger`](utils/logger.js) utility from [utils/logger.js](utils/logger.js).
+The API uses a centralized error handling mechanism via `asyncHandler`. All errors are logged using the custom logger utility.
 
 ## Response Format
 
-All API responses follow a standardized format using [`sendSuccessResponse`](utils/responseHandler.js) and [`sendErrorResponse`](utils/responseHandler.js) from [utils/responseHandler.js](utils/responseHandler.js):
+All API responses follow a standardized format:
 
 **Success Response:**
 
@@ -180,17 +216,11 @@ All API responses follow a standardized format using [`sendSuccessResponse`](uti
 npm run dev
 ```
 
-### Production Mode
-
-```bash
-npm start
-```
-
-The server will start on `http://localhost:3000` (or the port specified in [.env](.env)).
+The server will start on `http://localhost:3000` (or the port specified in `.env`).
 
 ## Logging
 
-The application uses a custom logger ([utils/logger.js](utils/logger.js)) that provides different log levels:
+The application uses a custom logger that provides different log levels:
 
 - `info` - General information
 - `debug` - Debug information
@@ -198,16 +228,17 @@ The application uses a custom logger ([utils/logger.js](utils/logger.js)) that p
 
 ## Security Considerations
 
+- All passwords are hashed using bcrypt with configurable salt rounds
 - JWT secret should be a strong, random string
-- Never commit [.env](.env) file to version control (already listed in [.gitignore](.gitignore))
+- Never commit `.env` file to version control
 - Use HTTPS in production
 - Implement rate limiting for production use
-- Add password hashing for user passwords
+- Tokens expire after configured time period
 
 ## Future Enhancements
 
-- [x] Add database integration (MongoDB/PostgreSQL)
-- [ ] Implement password authentication
+- [ ] Add database integration (MongoDB/PostgreSQL)
+- [x] Implement password authentication
 - [ ] Add refresh token mechanism
 - [ ] Implement password reset functionality
 - [ ] Add input validation middleware
@@ -221,7 +252,7 @@ ISC
 
 ## Author
 
-MarK Ruzell Maray
+Mark Ruzell Maray
 
 ---
 

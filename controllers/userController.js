@@ -7,7 +7,7 @@ import {
   sendSuccessResponse,
   sendErrorResponse,
 } from "../utils/responseHandler.js";
-import { send } from "process";
+import bcrypt from "bcrypt";
 
 export const getAllUsers = asyncHandler((req, res) => {
   if (users.length === 0) {
@@ -29,7 +29,7 @@ export const getUserById = asyncHandler((req, res) => {
   sendSuccessResponse(res, user, "User retrieved successfully");
 });
 
-export const createUser = asyncHandler((req, res) => {
+export const createUser = asyncHandler(async (req, res) => {
   const { name, email, role } = req.body;
   logger.debug("Creating a new user");
   if (!name || !email || !role) {
@@ -43,10 +43,16 @@ export const createUser = asyncHandler((req, res) => {
     return sendErrorResponse(res, "Email already exists", 409);
   }
 
+  const hashedPassword = await bcrypt.hash(
+    req.body.password,
+    parseInt(process.env.SALT_ROUNDS)
+  );
+
   const newUser = {
     id: crypto.randomUUID(),
     name,
     email,
+    password: hashedPassword,
     role,
   };
 
@@ -61,12 +67,39 @@ export const createUser = asyncHandler((req, res) => {
   );
 
   logger.info(`New user created with ID: ${newUser.id}`);
-  logger.debug(`Generated token for user Name: ${newUser.name}`);
   users.push(newUser);
+  const { password: _, ...userWithoutPassword } = newUser;
   sendSuccessResponse(
     res,
-    { user: newUser, token },
+    { user: userWithoutPassword, token },
     "User created successfully",
     201
   );
+});
+
+export const loginUser = asyncHandler(async (req, res) => {
+  console.log("LOGIN ENDPOINT HIT");
+  const { email, password } = req.body;
+  logger.debug("User login attempt");
+  const user = users.find((u) => u.email === email);
+  if (!user) {
+    logger.error(`Login failed: User with email ${email} not found`);
+    return sendErrorResponse(res, "Invalid email or password", 401);
+  }
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    logger.error(`Login failed: Invalid password for email ${email}`);
+    return sendErrorResponse(res, "Invalid email or password", 401);
+  }
+  const token = jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN }
+  );
+  logger.info(`User with email ${email} logged in successfully`);
+  sendSuccessResponse(res, { token }, "Login successful");
 });
