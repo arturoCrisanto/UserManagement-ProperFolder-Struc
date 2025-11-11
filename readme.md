@@ -206,7 +206,7 @@ The application uses a custom logger ([utils/logger.js](utils/logger.js)) that p
 
 ## Future Enhancements
 
-- [/] Add database integration (MongoDB/PostgreSQL)
+- [x] Add database integration (MongoDB/PostgreSQL)
 - [ ] Implement password authentication
 - [ ] Add refresh token mechanism
 - [ ] Implement password reset functionality
