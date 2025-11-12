@@ -1,6 +1,6 @@
 import users from "../models/userModels.js";
 import crypto from "crypto";
-import bcrypt from "bcrypt";
+import bycrypt from "bcrypt";
 import { asyncHandler } from "../utils/errorHandler.js";
 import { logger } from "../utils/logger.js";
 import {
@@ -50,11 +50,11 @@ export const createUser = asyncHandler(async (req, res) => {
   logger.debug("Creating a new user");
 
   // Validate required fields
-  if (!name || !email || !role || !password) {
+  if (!name || !email || !password) {
     logger.error("Missing required fields for user creation");
     return sendErrorResponse(
       res,
-      "Name, email, role, and password are required",
+      "Name, email, and password are required",
       400
     );
   }
@@ -71,7 +71,7 @@ export const createUser = asyncHandler(async (req, res) => {
     name,
     email,
     password: await hashPassword(password),
-    role,
+    role: role || "User",
     refreshTokens: [],
   };
 

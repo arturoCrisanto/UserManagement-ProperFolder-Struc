@@ -1,7 +1,9 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 
-const saltRounds = 10;
+const saltRounds = process.env.SALT_ROUNDS
+  ? parseInt(process.env.SALT_ROUNDS)
+  : 10;
 
 const users = [
   {
