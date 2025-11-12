@@ -217,9 +217,9 @@ flowchart TB
     M --> N
 
     style D fill:#ff6b6b
-    style G fill:#fab005
-    style H fill:#fab005
-    style K fill:#4dabf7
+    style G fill:#ff6b6b
+    style H fill:#ff6b6b
+    style K fill:#ff6b6b
 ```
 
 ## Default Test Users
