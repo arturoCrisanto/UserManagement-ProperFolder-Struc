@@ -181,7 +181,7 @@ flowchart TB
         B[Mobile Client]
         C[API Client]
     end
-
+    
     subgraph "Middleware Layer"
         D[Rate Limiter]
         E[CORS]
@@ -190,18 +190,18 @@ flowchart TB
         H[Role Middleware]
         I[Validation Middleware]
     end
-
+    
     subgraph "Application Layer"
         J[Routes]
         K[Controllers]
         L[Utils/Helpers]
     end
-
+    
     subgraph "Data Layer"
         M[User Models]
         N[In-Memory Storage]
     end
-
+    
     A --> D
     B --> D
     C --> D
@@ -215,11 +215,11 @@ flowchart TB
     K --> L
     K --> M
     M --> N
-
+    
     style D fill:#ff6b6b
-    style G fill:#ff6b6b
-    style H fill:#ff6b6b
-    style K fill:#ff6b6b
+    style G fill:#fab005
+    style H fill:#fab005
+    style K fill:#4dabf7
 ```
 
 ## Default Test Users
@@ -271,27 +271,27 @@ sequenceDiagram
     participant Client
     participant API
     participant Database
-
+    
     Note over Client,Database: Registration Flow
     Client->>API: POST /register (credentials)
     API->>API: Validate & Hash Password
     API->>Database: Store User
     API->>API: Generate JWT Tokens
     API->>Client: Return Tokens + User Data
-
+    
     Note over Client,Database: Login Flow
     Client->>API: POST /login (credentials)
     API->>Database: Find User
     API->>API: Compare Passwords
     API->>API: Generate JWT Tokens
     API->>Client: Return Tokens
-
+    
     Note over Client,Database: Protected Request
     Client->>API: GET /profile (with token)
     API->>API: Verify JWT Token
     API->>Database: Fetch User Data
     API->>Client: Return User Data
-
+    
     Note over Client,Database: Token Refresh
     Client->>API: POST /refresh (refresh token)
     API->>API: Verify Refresh Token
