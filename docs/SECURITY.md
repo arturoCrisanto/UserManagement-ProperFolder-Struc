@@ -159,119 +159,65 @@ openssl rand -hex 64
 
 ## Authentication Flow Security
 
-### Registration Security
+### Authentication Flow Security
 
-```javascript
-POST /api/users/register
+All authentication operations follow secure practices to protect user credentials and sessions.
 
-1. Validate input (email format, password strength)
-2. Sanitize input (prevent XSS)
-3. Check for duplicate email
-4. Hash password with bcrypt
-5. Create user with hashed password
-6. Generate JWT tokens
-7. Return user data without password
-```
+**Implementation:** 📄 [User Controller](../controllers/userController.js) | 📄 [Auth Helper](../utils/authHelper.js) | 📄 [JWT Utility](../utils/jwt.js)
 
-### Login Security
+**Registration Flow:**
 
-```javascript
-POST /api/users/login
+1. Validate and sanitize input
+2. Check for duplicate email
+3. Hash password with bcrypt
+4. Create user with hashed password
+5. Generate JWT tokens
+6. Return sanitized user data
 
-1. Validate input
+**Login Flow:**
+
+1. Validate credentials
 2. Find user by email
-3. Compare passwords using bcrypt
+3. Compare password using bcrypt
 4. Generate new JWT tokens
-5. Store refresh token with user
-6. Return tokens (don't return password)
-```
+5. Store refresh token
+6. Return tokens without password
 
-### Token Refresh Security
-
-```javascript
-POST /api/users/refresh
+**Token Refresh Flow:**
 
 1. Validate refresh token format
-2. Verify refresh token signature
-3. Check if token exists in user's token list
-4. Check if token is expired
+2. Verify token signature
+3. Check token exists in user's list
+4. Verify token not expired
 5. Generate new access token
-6. Return new access token only
-```
 
-### Logout Security
-
-```javascript
-POST /api/users/logout
+**Logout Flow:**
 
 1. Verify access token
 2. Validate refresh token
-3. Remove refresh token from user's list
-4. Token becomes invalid immediately
-```
+3. Remove token from user's list
+4. Invalidate session immediately
 
 ---
 
 ## Input Validation
 
-### express-validator Implementation
+### Implementation
 
-```javascript
-import { body, validationResult } from "express-validator";
+The API uses **express-validator** for route-level validation and custom validation helpers for reusable logic.
 
-export const validateRegistration = [
-  body("email")
-    .trim() // Remove whitespace
-    .isEmail() // Validate email format
-    .withMessage("Invalid email format")
-    .normalizeEmail(), // Normalize email
+**Validation Implementation:**
 
-  body("password")
-    .isLength({ min: 8 }) // Minimum length
-    .withMessage("Password must be at least 8 characters")
-    .matches(/[a-z]/) // Lowercase check
-    .withMessage("Password must contain lowercase letter")
-    .matches(/[A-Z]/) // Uppercase check
-    .withMessage("Password must contain uppercase letter")
-    .matches(/[0-9]/) // Number check
-    .withMessage("Password must contain number")
-    .matches(/[@$!%*?&#]/) // Special char check
-    .withMessage("Password must contain special character"),
+- 📄 [Validation Middleware](../middlewares/validateMiddleware.js) - Express-validator rules and middleware
+- 📄 [Validation Helpers](../utils/validationHelper.js) - Custom validation functions
 
-  handleValidationErrors,
-];
-```
+**Key Validation Features:**
 
-### Custom Validation Helpers
-
-```javascript
-import validator from "validator";
-
-// Email validation with sanitization
-export const isValidEmail = (email) => {
-  if (!email || typeof email !== "string") {
-    return { isValid: false, error: "Email is required" };
-  }
-
-  const sanitized = validator.trim(email);
-
-  if (!validator.isEmail(sanitized)) {
-    return { isValid: false, error: "Invalid email format" };
-  }
-
-  return {
-    isValid: true,
-    sanitized: validator.normalizeEmail(sanitized),
-    error: null,
-  };
-};
-
-// String sanitization (XSS protection)
-export const sanitizeString = (input) => {
-  if (!input || typeof input !== "string") return "";
-  return validator.escape(validator.trim(input));
-};
-```
+- ✅ Email format validation and normalization
+- ✅ Password strength validation (8+ chars, uppercase, lowercase, number)
+- ✅ Username validation (3-30 chars, alphanumeric with hyphens/underscores)
+- ✅ Input sanitization to prevent XSS attacks
+- ✅ Detailed error messages for validation failures
 
 ---
 
@@ -279,33 +225,24 @@ export const sanitizeString = (input) => {
 
 ### Data Sanitization
 
-```javascript
-// Remove sensitive fields before sending response
-export const sanitizeUser = (user) => {
-  const { password, refreshTokens, ...sanitizedUser } = user;
-  return sanitizedUser;
-};
-```
+All user data is sanitized before being sent in API responses to prevent exposure of sensitive information.
 
-### What Gets Removed
+**Implementation:** 📄 [Authentication Helper](../utils/authHelper.js)
 
-```javascript
-// Before sanitization
+**Protected Fields:**
+
+- ❌ `password` - Never exposed in responses
+- ❌ `refreshTokens` - Kept server-side only
+- ✅ `id`, `name`, `email`, `role` - Safe to expose
+
+**Example Response:**
+
+```json
 {
-  id: "uuid",
-  name: "John Doe",
-  email: "john@example.com",
-  password: "$2b$10$hashed...",        // ❌ REMOVED
-  refreshTokens: ["token1", "token2"], // ❌ REMOVED
-  role: "User"
-}
-
-// After sanitization
-{
-  id: "uuid",
-  name: "John Doe",
-  email: "john@example.com",
-  role: "User"
+  "id": "uuid",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "User"
 }
 ```
 
@@ -313,27 +250,19 @@ export const sanitizeUser = (user) => {
 
 ## Error Handling Security
 
-### Don't Expose Sensitive Information
+### Secure Error Responses
 
-**❌ Bad:**
+The API implements secure error handling to prevent information leakage.
 
-```javascript
-res.status(500).json({
-  error: error.stack, // Exposes stack trace
-  query: req.query, // Exposes query params
-  body: req.body, // Exposes request body
-});
-```
+**Implementation:** 📄 [Error Handler](../utils/errorHandler.js) | 📄 [Response Handler](../utils/responseHandler.js)
 
-**✅ Good:**
+**Security Principles:**
 
-```javascript
-res.status(500).json({
-  success: false,
-  message: "Internal server error",
-  error: process.env.NODE_ENV === "development" ? error.message : {},
-});
-```
+- ✅ Generic error messages in production
+- ✅ Detailed errors only in development mode
+- ✅ No stack traces exposed to clients
+- ✅ No database query information leaked
+- ✅ Consistent error response format
 
 ### Consistent Error Messages
 
@@ -356,31 +285,20 @@ Invalid email or password  // Ambiguous message for both cases
 
 ### Production Requirements
 
-```javascript
-// Redirect HTTP to HTTPS
-app.use((req, res, next) => {
-  if (
-    req.header("x-forwarded-proto") !== "https" &&
-    process.env.NODE_ENV === "production"
-  ) {
-    res.redirect(`https://${req.header("host")}${req.url}`);
-  } else {
-    next();
-  }
-});
-```
+For production deployment, HTTPS should be enforced to encrypt data in transit.
 
-### Security Headers
+**Recommended Implementation:**
 
-```javascript
-// Install helmet
-npm install helmet
+- Force HTTPS redirect for all HTTP requests
+- Use valid SSL/TLS certificates
+- Configure security headers with Helmet.js
 
-// Use in server.js
-import helmet from 'helmet';
+**Security Headers (Helmet.js):**
 
-app.use(helmet()); // Sets various security headers
-```
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Strict-Transport-Security`
 
 ---
 
@@ -404,65 +322,27 @@ AUTH_RATE_LIMIT_MAX=5            # Max requests per window for auth endpoints
 
 **1. General API Limiter**
 
-```javascript
-// Applied to all API routes
 - Window: 15 minutes (configurable)
 - Max Requests: 100 per window (configurable)
 - Scope: All endpoints
-```
 
 **2. Authentication Limiter**
 
-```javascript
-// Applied to login and register endpoints
 - Window: 15 minutes (configurable)
 - Max Requests: 5 per window (configurable)
-- Scope: /login and /register
-```
+- Scope: `/login` and `/register`
 
 **3. Account Creation Limiter**
 
-```javascript
-// Applied to registration endpoint
 - Window: 1 hour
 - Max Requests: 3 per window
-- Scope: /register only
-```
+- Scope: `/register` only
 
 #### Implementation
 
-**middlewares/rateLimitMiddleware.js:**
+**Source Code:** 📄 [Rate Limit Middleware](../middlewares/rateLimitMiddleware.js)
 
-```javascript
-import rateLimit from "express-rate-limit";
-
-const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
-const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100;
-const authMaxRequests = parseInt(process.env.AUTH_RATE_LIMIT_MAX) || 5;
-
-// General API rate limiter
-export const apiLimiter = rateLimit({
-  windowMs,
-  max: maxRequests,
-  message: "Too many requests from this IP, please try again later.",
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Stricter limiter for authentication endpoints
-export const authLimiter = rateLimit({
-  windowMs,
-  max: authMaxRequests,
-  message: "Too many authentication attempts, please try again later.",
-});
-
-// Account creation limiter
-export const createAccountLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
-  message: "Too many accounts created from this IP, please try again later.",
-});
-```
+The rate limiting implementation uses `express-rate-limit` package with configurable limits per endpoint type.
 
 #### Response Headers
 
@@ -489,28 +369,18 @@ RateLimit-Reset: 1636723200
 
 ## CORS Configuration
 
-### Secure CORS Setup
+Cross-Origin Resource Sharing (CORS) should be properly configured based on your deployment environment.
 
-```javascript
-// Install cors
-npm install cors
+**Configuration Options:**
 
-// In server.js
-import cors from 'cors';
+- **Development:** Allow localhost origins
+- **Production:** Restrict to specific domains via environment variables
+- **Credentials:** Enable for authentication with cookies
 
-const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-```
-
-### .env Configuration
+**Environment Variable:**
 
 ```env
-ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 ```
 
 ---

@@ -82,8 +82,9 @@ Create a new user account.
   - At least one uppercase letter
   - At least one lowercase letter
   - At least one number
-  - At least one special character (@$!%\*?&#)
 - `role`: Optional, defaults to "User"
+
+**Implementation:** 📄 [Validation Middleware](../middlewares/validateMiddleware.js) | 📄 [Validation Helpers](../utils/validationHelper.js)
 
 **Success Response (201 Created):**
 
