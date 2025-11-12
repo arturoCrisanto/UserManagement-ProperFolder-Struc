@@ -35,12 +35,13 @@ export const isValidPassword = (password) => {
       minLowercase: 1,
       minUppercase: 1,
       minNumbers: 1,
+      minSymbols: 0, // Remove special character requirement
     })
   ) {
     return {
       isValid: false,
       error:
-        "Password must contain uppercase, lowercase, number, and special character",
+        "Password must contain at least one uppercase letter, one lowercase letter, and a number",
     };
   }
   return { isValid: true, error: null };
