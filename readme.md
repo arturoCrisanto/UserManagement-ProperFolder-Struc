@@ -1,6 +1,6 @@
 # Express.js User Management API
 
-A RESTful API built with Express.js for user management with JWT authentication, role-based authorization, bcrypt password hashing, and comprehensive testing.
+A RESTful API built with Express.js for user management with JWT authentication, role-based authorization, bcrypt password hashing, rate limiting, and comprehensive testing.
 
 ## Features
 
@@ -15,6 +15,7 @@ A RESTful API built with Express.js for user management with JWT authentication,
 - ✅ Custom error handling
 - ✅ Structured logging
 - ✅ Standardized API responses
+- ✅ Rate limiting for API protection
 - ✅ Comprehensive test coverage (23 tests passing)
 
 ## Tech Stack
@@ -24,6 +25,7 @@ A RESTful API built with Express.js for user management with JWT authentication,
 - **Authentication:** JWT (jsonwebtoken)
 - **Password Hashing:** bcrypt
 - **Validation:** express-validator, validator
+- **Rate Limiting:** express-rate-limit
 - **Testing:** Jest + Supertest
 - **Environment:** dotenv
 - **Development:** nodemon
@@ -43,7 +45,8 @@ express2/
 ├── middlewares/
 │   ├── authMiddleware.js         # JWT authentication middleware
 │   ├── roleMiddleware.js         # Role-based authorization middleware
-│   └── validateMiddleware.js     # Input validation middleware
+│   ├── validateMiddleware.js     # Input validation middleware
+│   └── rateLimitMiddleware.js    # Rate limiting middleware
 ├── models/
 │   └── userModels.js             # User data models
 ├── routes/
@@ -95,6 +98,9 @@ JWT_EXPIRES_IN=1h
 JWT_REFRESH_SECRET=your_jwt_refresh_secret_key_here_also_long_and_random
 JWT_REFRESH_EXPIRES_IN=7d
 SALT_ROUNDS=10
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_MAX=5
 ```
 
 4. Create a `.env.test` file for testing:
@@ -107,18 +113,24 @@ JWT_EXPIRES_IN=1h
 JWT_REFRESH_SECRET=test_jwt_refresh_secret_key_for_testing
 JWT_REFRESH_EXPIRES_IN=7d
 SALT_ROUNDS=10
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_MAX=5
 ```
 
 ## Environment Variables
 
-| Variable                 | Description                          | Default | Required |
-| ------------------------ | ------------------------------------ | ------- | -------- |
-| `PORT`                   | Server port number                   | 3000    | No       |
-| `JWT_SECRET`             | Secret key for JWT signing           | -       | Yes      |
-| `JWT_EXPIRES_IN`         | JWT access token expiration time     | 1h      | No       |
-| `JWT_REFRESH_SECRET`     | Secret key for refresh token signing | -       | Yes      |
-| `JWT_REFRESH_EXPIRES_IN` | JWT refresh token expiration time    | 7d      | No       |
-| `SALT_ROUNDS`            | Bcrypt salt rounds for hashing       | 10      | No       |
+| Variable                  | Description                          | Default | Required |
+| ------------------------- | ------------------------------------ | ------- | -------- |
+| `PORT`                    | Server port number                   | 3000    | No       |
+| `JWT_SECRET`              | Secret key for JWT signing           | -       | Yes      |
+| `JWT_EXPIRES_IN`          | JWT access token expiration time     | 1h      | No       |
+| `JWT_REFRESH_SECRET`      | Secret key for refresh token signing | -       | Yes      |
+| `JWT_REFRESH_EXPIRES_IN`  | JWT refresh token expiration time    | 7d      | No       |
+| `SALT_ROUNDS`             | Bcrypt salt rounds for hashing       | 10      | No       |
+| `RATE_LIMIT_WINDOW_MS`    | Rate limit time window in ms         | 900000  | No       |
+| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window              | 100     | No       |
+| `AUTH_RATE_LIMIT_MAX`     | Max auth attempts per window         | 5       | No       |
 
 ## Quick Start
 
@@ -226,7 +238,7 @@ Authorization: Bearer <your_jwt_token>
 - [ ] Implement password reset functionality
 - [ ] Add email verification for new users
 - [ ] Add API documentation (Swagger/OpenAPI)
-- [ ] Implement rate limiting
+- [x] Implement rate limiting
 - [ ] Add pagination for user lists
 - [ ] Add file upload for profile pictures
 

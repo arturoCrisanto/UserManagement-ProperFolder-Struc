@@ -17,12 +17,24 @@ import {
   validateProfileUpdate,
   validateRefreshToken,
 } from "../middlewares/validateMiddleware.js";
+import {
+  createAccountRateLimiter,
+  authRateLimiter,
+  apiRateLimiter,
+} from "../middlewares/rateLimitMiddleware.js";
 
 const router = express.Router();
+// Apply general API rate limiter to all routes
+router.use(apiRateLimiter);
 
 // Public routes (no authentication required)
-router.post("/register", validateRegistration, createUser);
-router.post("/login", validateLogin, loginUser);
+router.post(
+  "/register",
+  createAccountRateLimiter,
+  validateRegistration,
+  createUser
+);
+router.post("/login", authRateLimiter, validateLogin, loginUser);
 router.post("/refresh", validateRefreshToken, refreshAccessToken);
 
 // Protected routes (authentication required)
