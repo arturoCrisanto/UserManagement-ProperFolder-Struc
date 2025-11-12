@@ -172,6 +172,56 @@ Server runs on `http://localhost:3000` by default.
 
 📖 **For detailed API documentation with examples, see [docs/API.md](docs/API.md)**
 
+### API Architecture
+
+```mermaid
+flowchart TB
+    subgraph "Client Layer"
+        A[Web Client]
+        B[Mobile Client]
+        C[API Client]
+    end
+
+    subgraph "Middleware Layer"
+        D[Rate Limiter]
+        E[CORS]
+        F[Body Parser]
+        G[Auth Middleware]
+        H[Role Middleware]
+        I[Validation Middleware]
+    end
+
+    subgraph "Application Layer"
+        J[Routes]
+        K[Controllers]
+        L[Utils/Helpers]
+    end
+
+    subgraph "Data Layer"
+        M[User Models]
+        N[In-Memory Storage]
+    end
+
+    A --> D
+    B --> D
+    C --> D
+    D --> E
+    E --> F
+    F --> J
+    J --> G
+    G --> H
+    H --> I
+    I --> K
+    K --> L
+    K --> M
+    M --> N
+
+    style D fill:#ff6b6b
+    style G fill:#fab005
+    style H fill:#fab005
+    style K fill:#4dabf7
+```
+
 ## Default Test Users
 
 All users have password: `password123`
@@ -213,6 +263,41 @@ Authorization: Bearer <your_jwt_token>
 - **Access tokens** expire in 1 hour (configurable)
 - **Refresh tokens** expire in 7 days (configurable)
 - Tokens are invalidated on logout
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Database
+
+    Note over Client,Database: Registration Flow
+    Client->>API: POST /register (credentials)
+    API->>API: Validate & Hash Password
+    API->>Database: Store User
+    API->>API: Generate JWT Tokens
+    API->>Client: Return Tokens + User Data
+
+    Note over Client,Database: Login Flow
+    Client->>API: POST /login (credentials)
+    API->>Database: Find User
+    API->>API: Compare Passwords
+    API->>API: Generate JWT Tokens
+    API->>Client: Return Tokens
+
+    Note over Client,Database: Protected Request
+    Client->>API: GET /profile (with token)
+    API->>API: Verify JWT Token
+    API->>Database: Fetch User Data
+    API->>Client: Return User Data
+
+    Note over Client,Database: Token Refresh
+    Client->>API: POST /refresh (refresh token)
+    API->>API: Verify Refresh Token
+    API->>API: Generate New Access Token
+    API->>Client: Return New Access Token
+```
 
 🔒 **For security best practices, see [docs/SECURITY.md](docs/SECURITY.md)**
 

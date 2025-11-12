@@ -53,30 +53,30 @@ Security features and best practices for the Express.js User Management API.
 
 ### Enforced Rules
 
-```javascript
+```
 - Minimum length: 8 characters
 - Must contain:
   ✓ At least one uppercase letter (A-Z)
   ✓ At least one lowercase letter (a-z)
   ✓ At least one number (0-9)
-  ✓ At least one special character (@$!%*?&#)
 ```
 
 ### Example Valid Passwords
 
 ```
-✅ Password@123
-✅ SecureP@ss1
-✅ MyStr0ng!Pass
+✅ Password123
+✅ SecurePass1
+✅ MyStrong1Pass
+✅ TestUser2024
 ```
 
 ### Example Invalid Passwords
 
 ```
-❌ password123      (no uppercase, no special char)
-❌ PASSWORD123      (no lowercase, no special char)
-❌ Password         (no number, no special char)
-❌ Pass@1           (too short)
+❌ password123      (no uppercase)
+❌ PASSWORD123      (no lowercase)
+❌ Password         (no number)
+❌ Pass123          (too short)
 ```
 
 ---
@@ -198,6 +198,40 @@ All authentication operations follow secure practices to protect user credential
 3. Remove token from user's list
 4. Invalidate session immediately
 
+### Authentication Flow Diagram
+
+```mermaid
+flowchart TD
+    A[Client] -->|POST /register| B[Registration]
+    B -->|Validate Input| C{Valid?}
+    C -->|No| D[Return 400 Error]
+    C -->|Yes| E[Check Duplicate Email]
+    E -->|Exists| F[Return 409 Error]
+    E -->|Not Exists| G[Hash Password with bcrypt]
+    G --> H[Create User]
+    H --> I[Generate JWT Tokens]
+    I --> J[Return User + Tokens]
+
+    A -->|POST /login| K[Login]
+    K -->|Find User| L{User Exists?}
+    L -->|No| M[Return 401 Error]
+    L -->|Yes| N[Compare Password]
+    N -->|Invalid| M
+    N -->|Valid| O[Generate JWT Tokens]
+    O --> P[Store Refresh Token]
+    P --> Q[Return Tokens]
+
+    A -->|POST /refresh| R[Refresh Token]
+    R -->|Verify Token| S{Valid?}
+    S -->|No| T[Return 401 Error]
+    S -->|Yes| U[Generate New Access Token]
+    U --> V[Return New Token]
+
+    A -->|POST /logout| W[Logout]
+    W -->|Verify Token| X[Remove Refresh Token]
+    X --> Y[Return Success]
+```
+
 ---
 
 ## Input Validation
@@ -218,6 +252,21 @@ The API uses **express-validator** for route-level validation and custom validat
 - ✅ Username validation (3-30 chars, alphanumeric with hyphens/underscores)
 - ✅ Input sanitization to prevent XSS attacks
 - ✅ Detailed error messages for validation failures
+
+### Validation Flow Diagram
+
+```mermaid
+flowchart LR
+    A[User Input] --> B[Express-Validator]
+    B --> C{Valid?}
+    C -->|No| D[Collect Errors]
+    D --> E[Return 400 + Errors]
+    C -->|Yes| F[Sanitize Input]
+    F --> G[Custom Validators]
+    G --> H{Pass?}
+    H -->|No| E
+    H -->|Yes| I[Process Request]
+```
 
 ---
 
@@ -264,6 +313,35 @@ The API implements secure error handling to prevent information leakage.
 - ✅ No database query information leaked
 - ✅ Consistent error response format
 
+### Error Handling Flow Diagram
+
+```mermaid
+flowchart TD
+    A[Error Occurs] --> B{Error Type}
+    B -->|Validation Error| C[400 Bad Request]
+    B -->|Authentication Error| D[401 Unauthorized]
+    B -->|Authorization Error| E[403 Forbidden]
+    B -->|Not Found| F[404 Not Found]
+    B -->|Conflict| G[409 Conflict]
+    B -->|Rate Limit| H[429 Too Many Requests]
+    B -->|Server Error| I{Environment}
+    I -->|Development| J[Return Detailed Error]
+    I -->|Production| K[Return Generic Error]
+
+    C --> L[Log Error]
+    D --> L
+    E --> L
+    F --> L
+    G --> L
+    H --> L
+    J --> L
+    K --> L
+    L --> M[Send Response]
+
+    style K fill:#51cf66
+    style J fill:#ffd43b
+```
+
 ### Consistent Error Messages
 
 **❌ Bad:** (Helps attackers)
@@ -299,6 +377,30 @@ For production deployment, HTTPS should be enforced to encrypt data in transit.
 - `X-Frame-Options: DENY`
 - `X-XSS-Protection: 1; mode=block`
 - `Strict-Transport-Security`
+
+### Security Layers Diagram
+
+```mermaid
+flowchart TB
+    subgraph "Application Security Layers"
+        A[HTTPS/TLS Encryption] --> B[Rate Limiting]
+        B --> C[CORS Policy]
+        C --> D[Security Headers]
+        D --> E[Input Validation]
+        E --> F[JWT Authentication]
+        F --> G[Role Authorization]
+        G --> H[Data Sanitization]
+        H --> I[Error Handling]
+    end
+
+    J[Client Request] --> A
+    I --> K[Secure Response]
+
+    style A fill:#4dabf7
+    style F fill:#fab005
+    style G fill:#ff6b6b
+    style K fill:#51cf66
+```
 
 ---
 
@@ -343,6 +445,24 @@ AUTH_RATE_LIMIT_MAX=5            # Max requests per window for auth endpoints
 **Source Code:** 📄 [Rate Limit Middleware](../middlewares/rateLimitMiddleware.js)
 
 The rate limiting implementation uses `express-rate-limit` package with configurable limits per endpoint type.
+
+### Rate Limiting Flow Diagram
+
+```mermaid
+flowchart TD
+    A[Incoming Request] --> B{Check IP Address}
+    B --> C{Request Count}
+    C -->|Under Limit| D[Increment Counter]
+    D --> E[Process Request]
+    E --> F[Add Rate Limit Headers]
+    F --> G[Return Response]
+    C -->|At Limit| H[Return 429 Error]
+    H --> I[Too Many Requests]
+
+    style H fill:#ff6b6b
+    style I fill:#ff6b6b
+    style G fill:#51cf66
+```
 
 #### Response Headers
 
