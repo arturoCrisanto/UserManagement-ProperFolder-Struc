@@ -1,12 +1,16 @@
 import bcrypt from "bcrypt";
 import { generateToken, generateRefreshToken } from "../utils/jwt.js";
-
+import { isValidPassword } from "./validationHelper.js";
 /**
  * Hash a password
  * @param {string} password - Plain text password
  * @returns {Promise<string>} Hashed password
  */
 export const hashPassword = async (password) => {
+  const validation = isValidPassword(password);
+  if (!validation.isValid) {
+    throw new Error(validation.error);
+  }
   return await bcrypt.hash(password, parseInt(process.env.SALT_ROUNDS));
 };
 

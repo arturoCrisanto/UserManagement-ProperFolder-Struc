@@ -182,11 +182,65 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
     sendSuccessResponse(
       res,
-      { accessToken: accessToken },
+      { email: user.email, accessToken: accessToken },
       "Token refreshed successfully"
     );
   } catch (error) {
     logger.error("Token refresh failed: " + error.message);
     return sendErrorResponse(res, "Invalid or expired refresh token", 401);
   }
+});
+
+// ==================== Profile Operations ====================
+
+export const getCurrentUserProfile = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  logger.debug(`Fetching profile for user ID: ${userId}`);
+
+  const user = users.find((u) => u.id === userId);
+
+  if (!user) {
+    logger.error(`User with ID: ${userId} not found`);
+    return sendErrorResponse(res, "User not found", 404);
+  }
+
+  logger.info(`Profile retrieved successfully for user ID: ${userId}`);
+  sendSuccessResponse(
+    res,
+    sanitizeUser(user),
+    "Profile retrieved successfully"
+  );
+});
+
+export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { name, email } = req.body;
+
+  logger.debug(`Updating profile for user ID: ${userId}`);
+
+  const user = users.find((u) => u.id === userId);
+
+  if (!user) {
+    logger.error(`User with ID: ${userId} not found`);
+    return sendErrorResponse(res, "User not found", 404);
+  }
+
+  // Check if email is being changed and if it already exists
+  if (email && email !== user.email) {
+    const emailExists = users.find((u) => u.email === email && u.id !== userId);
+    if (emailExists) {
+      logger.error(`Email ${email} already exists`);
+      return sendErrorResponse(res, "Email already exists", 409);
+    }
+    user.email = email;
+  }
+
+  // Update name if provided
+  if (name) {
+    user.name = name;
+  }
+
+  logger.info(`Profile updated successfully for user ID: ${userId}`);
+  sendSuccessResponse(res, sanitizeUser(user), "Profile updated successfully");
 });

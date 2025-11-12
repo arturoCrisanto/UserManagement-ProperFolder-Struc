@@ -8,18 +8,37 @@ import {
   loginUser,
   logoutUser,
   refreshAccessToken,
+  getCurrentUserProfile,
+  updateCurrentUserProfile,
 } from "../controllers/userController.js";
+import {
+  validateRegistration,
+  validateLogin,
+  validateProfileUpdate,
+  validateRefreshToken,
+} from "../middlewares/validateMiddleware.js";
 
 const router = express.Router();
 
-// routes for user operations
-// Specific routes MUST come before parameterized routes
-router
-  .post("/login", loginUser)
-  .post("/refresh", refreshAccessToken)
-  .post("/logout", logoutUser)
-  .post("/", createUser)
-  .get("/profile", authenticateToken, authorizeRole("Admin"), getAllUsers)
-  .get("/:id", authenticateToken, authorizeRole("Admin"), getUserById);
+// Public routes (no authentication required)
+router.post("/register", validateRegistration, createUser);
+router.post("/login", validateLogin, loginUser);
+router.post("/refresh", validateRefreshToken, refreshAccessToken);
+
+// Protected routes (authentication required)
+router.post("/logout", authenticateToken, logoutUser);
+
+// Current user profile routes
+router.get("/profile", authenticateToken, getCurrentUserProfile);
+router.put(
+  "/profile",
+  authenticateToken,
+  validateProfileUpdate,
+  updateCurrentUserProfile
+);
+
+// Admin-only routes
+router.get("/all", authenticateToken, authorizeRole("Admin"), getAllUsers);
+router.get("/:id", authenticateToken, authorizeRole("Admin"), getUserById);
 
 export default router;

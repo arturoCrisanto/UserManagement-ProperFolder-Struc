@@ -1,24 +1,35 @@
 import express from "express";
 import dotenv from "dotenv";
 import userRoutes from "./routes/userRoutes.js";
+import { logger } from "./utils/logger.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
 
-//middleware to parse json
+// Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-//api routes
+// Routes
 app.use("/api/users", userRoutes);
 
-//checking server
-app.get("/", (req, res) => {
-  res.send("this API is Working Properly");
+// Error handling middleware
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Something went wrong!",
+    error: process.env.NODE_ENV === "development" ? err.message : {},
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port localhost:${PORT}`);
-});
+// Export app for testing
+export default app;
+
+// Start server only if not in test environment
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    logger.info(`Server is running on port ${PORT}`);
+  });
+}

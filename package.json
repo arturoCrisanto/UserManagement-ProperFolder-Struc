@@ -4,8 +4,11 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +18,32 @@
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-validator": "^7.3.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "validator": "^13.15.23"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/?(*.)+(spec|test).js"
+    ],
+    "collectCoverageFrom": [
+      "**/*.js",
+      "!**/node_modules/**",
+      "!**/coverage/**",
+      "!server.js"
+    ]
   }
 }

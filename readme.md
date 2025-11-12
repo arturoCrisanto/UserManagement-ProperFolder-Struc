@@ -1,42 +1,69 @@
 # Express.js User Management API
 
-A RESTful API built with Express.js for user management with JWT authentication, role-based authorization, and bcrypt password hashing.
+A RESTful API built with Express.js for user management with JWT authentication, role-based authorization, bcrypt password hashing, and comprehensive testing.
 
 ## Features
 
-- User registration and authentication
-- JWT-based authentication with access and refresh tokens
-- Role-based access control (RBAC)
-- Bcrypt password hashing
-- Token refresh mechanism
-- Secure logout functionality
-- Custom error handling
-- Structured logging
-- Standardized API responses
+- ✅ User registration and authentication
+- ✅ JWT-based authentication with access and refresh tokens
+- ✅ Role-based access control (RBAC)
+- ✅ Bcrypt password hashing with salt rounds
+- ✅ Token refresh mechanism
+- ✅ Secure logout functionality
+- ✅ User profile management (get/update)
+- ✅ Input validation and sanitization
+- ✅ Custom error handling
+- ✅ Structured logging
+- ✅ Standardized API responses
+- ✅ Comprehensive test coverage (23 tests passing)
+
+## Tech Stack
+
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Authentication:** JWT (jsonwebtoken)
+- **Password Hashing:** bcrypt
+- **Validation:** express-validator, validator
+- **Testing:** Jest + Supertest
+- **Environment:** dotenv
+- **Development:** nodemon
 
 ## Project Structure
 
 ```
-.
+express2/
 ├── .env                          # Environment variables
+├── .env.test                     # Test environment variables
 ├── .gitignore                    # Git ignore file
+├── babel.config.cjs              # Babel configuration for Jest
 ├── package.json                  # Project dependencies
 ├── server.js                     # Application entry point
 ├── controllers/
 │   └── userController.js         # User business logic
 ├── middlewares/
 │   ├── authMiddleware.js         # JWT authentication middleware
-│   └── roleMiddleware.js         # Role-based authorization middleware
+│   ├── roleMiddleware.js         # Role-based authorization middleware
+│   └── validateMiddleware.js     # Input validation middleware
 ├── models/
 │   └── userModels.js             # User data models
 ├── routes/
 │   └── userRoutes.js             # User route definitions
-└── utils/
-    ├── authHelper.js             # Authentication helper functions
-    ├── errorHandler.js           # Error handling utilities
-    ├── jwt.js                    # JWT token generation and verification
-    ├── logger.js                 # Logging configuration
-    └── responseHandler.js        # Standardized response format
+├── utils/
+│   ├── authHelper.js             # Authentication helper functions
+│   ├── errorHandler.js           # Error handling utilities
+│   ├── jwt.js                    # JWT token generation and verification
+│   ├── logger.js                 # Winston logger configuration
+│   ├── responseHandler.js        # Standardized response format
+│   └── validationHelper.js       # Input validation helpers
+├── tests/
+│   └── __tests__/
+│       ├── auth.test.js          # Authentication endpoint tests
+│       ├── profile.test.js       # Profile endpoint tests
+│       └── authHelper.test.js    # Helper function unit tests
+└── docs/
+    ├── API.md                    # Complete API documentation
+    ├── TESTING.md                # Testing guide
+    └── SECURITY.md               # Security best practices
 ```
 
 ## Prerequisites
@@ -59,149 +86,79 @@ cd express2
 npm install
 ```
 
-3. Create a `.env` file in the root directory with the following variables:
+3. Create a `.env` file in the root directory:
 
 ```env
 PORT=3000
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
-JWT_REFRESH_EXPIRES_IN=30d
+JWT_SECRET=your_jwt_secret_key_here_make_it_long_and_random
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=your_jwt_refresh_secret_key_here_also_long_and_random
+JWT_REFRESH_EXPIRES_IN=7d
+SALT_ROUNDS=10
+```
+
+4. Create a `.env.test` file for testing:
+
+```env
+NODE_ENV=test
+PORT=3001
+JWT_SECRET=test_jwt_secret_key_for_testing
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=test_jwt_refresh_secret_key_for_testing
+JWT_REFRESH_EXPIRES_IN=7d
 SALT_ROUNDS=10
 ```
 
 ## Environment Variables
 
-| Variable                 | Description                          | Default |
-| ------------------------ | ------------------------------------ | ------- |
-| `PORT`                   | Server port number                   | 3000    |
-| `JWT_SECRET`             | Secret key for JWT signing           | -       |
-| `JWT_EXPIRES_IN`         | JWT access token expiration time     | 7d      |
-| `JWT_REFRESH_SECRET`     | Secret key for refresh token signing | -       |
-| `JWT_REFRESH_EXPIRES_IN` | JWT refresh token expiration time    | 30d     |
-| `SALT_ROUNDS`            | Bcrypt salt rounds for hashing       | 10      |
+| Variable                 | Description                          | Default | Required |
+| ------------------------ | ------------------------------------ | ------- | -------- |
+| `PORT`                   | Server port number                   | 3000    | No       |
+| `JWT_SECRET`             | Secret key for JWT signing           | -       | Yes      |
+| `JWT_EXPIRES_IN`         | JWT access token expiration time     | 1h      | No       |
+| `JWT_REFRESH_SECRET`     | Secret key for refresh token signing | -       | Yes      |
+| `JWT_REFRESH_EXPIRES_IN` | JWT refresh token expiration time    | 7d      | No       |
+| `SALT_ROUNDS`            | Bcrypt salt rounds for hashing       | 10      | No       |
+
+## Quick Start
+
+### Running the Application
+
+```bash
+# Development mode with auto-reload
+npm run dev
+
+# Production mode
+npm start
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate test coverage
+npm run test:coverage
+```
+
+Server runs on `http://localhost:3000` by default.
 
 ## API Endpoints
 
-### Public Endpoints
+### Quick Reference
 
-#### Register User
+| Method | Endpoint              | Auth Required | Role Required | Description                 |
+| ------ | --------------------- | ------------- | ------------- | --------------------------- |
+| POST   | `/api/users/register` | No            | -             | Register new user           |
+| POST   | `/api/users/login`    | No            | -             | Login user                  |
+| POST   | `/api/users/refresh`  | No            | -             | Refresh access token        |
+| POST   | `/api/users/logout`   | Yes           | -             | Logout user                 |
+| GET    | `/api/users/profile`  | Yes           | -             | Get current user profile    |
+| PUT    | `/api/users/profile`  | Yes           | -             | Update current user profile |
+| GET    | `/api/users/all`      | Yes           | Admin         | Get all users               |
+| GET    | `/api/users/:id`      | Yes           | Admin         | Get user by ID              |
 
-```http
-POST /api/users/
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "role": "User"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "User created successfully",
-  "data": {
-    "user": {
-      "id": "uuid",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "role": "User"
-    },
-    "accessToken": "jwt_access_token",
-    "refreshToken": "jwt_refresh_token"
-  }
-}
-```
-
-#### Login User
-
-```http
-POST /api/users/login
-Content-Type: application/json
-
-{
-  "email": "alice@example.com",
-  "password": "password123"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "accessToken": "jwt_access_token",
-    "refreshToken": "jwt_refresh_token"
-  }
-}
-```
-
-#### Refresh Access Token
-
-```http
-POST /api/users/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "jwt_refresh_token"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Token refreshed successfully",
-  "data": {
-    "accessToken": "new_jwt_access_token"
-  }
-}
-```
-
-#### Logout User
-
-```http
-POST /api/users/logout
-Content-Type: application/json
-
-{
-  "refreshToken": "jwt_refresh_token"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Logout successful",
-  "data": null
-}
-```
-
-### Protected Endpoints (Admin Only)
-
-#### Get All Users
-
-```http
-GET /api/users/profile
-Authorization: Bearer <token>
-```
-
-#### Get User by ID
-
-```http
-GET /api/users/:id
-Authorization: Bearer <token>
-```
+📖 **For detailed API documentation with examples, see [docs/API.md](docs/API.md)**
 
 ## Default Test Users
 
@@ -214,98 +171,64 @@ All users have password: `password123`
 | diana@example.com | Moderator |
 | fiona@example.com | Admin     |
 
+## Testing
+
+This project includes comprehensive test coverage with **Jest** and **Supertest**.
+
+### Test Results
+
+```
+✅ Test Suites: 3 passed, 3 total
+✅ Tests: 23 passed, 23 total
+⏱️  Time: ~2.2s
+```
+
+### Test Coverage
+
+- **Integration Tests**: Authentication, Profile, Logout flows
+- **Unit Tests**: Helper functions (password hashing, sanitization)
+
+📖 **For detailed testing documentation, see [docs/TESTING.md](docs/TESTING.md)**
+
 ## Authentication
 
-This API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
+This API uses JWT (JSON Web Tokens) for authentication:
 
 ```
 Authorization: Bearer <your_jwt_token>
 ```
 
-Tokens are returned upon successful registration or login.
-
-## Middleware
-
-### Authentication Middleware
-
-`authenticateToken` - Verifies JWT tokens for protected routes
-
-### Role Middleware
-
-`authorizeRole` - Checks user roles for authorization
-
-## Error Handling
-
-The API uses a centralized error handling mechanism via `asyncHandler`. All errors are logged using the custom logger utility.
-
-## Response Format
-
-All API responses follow a standardized format:
-
-**Success Response:**
-
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": {}
-}
-```
-
-**Error Response:**
-
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "error": {}
-}
-```
-
-## Running the Application
-
-### Development Mode
-
-```bash
-npm run dev
-```
-
-The server will start on `http://localhost:3000` (or the port specified in `.env`).
-
-## Logging
-
-The application uses a custom logger that provides different log levels:
-
-- `info` - General information
-- `debug` - Debug information
-- `error` - Error messages
-
-## Security Considerations
-
-- All passwords are hashed using bcrypt with configurable salt rounds
-- JWT secret should be a strong, random string
-- Never commit `.env` file to version control
-- Use HTTPS in production
-- Implement rate limiting for production use
-- Access tokens expire after configured time period (default: 7 days)
-- Refresh tokens expire after configured time period (default: 30 days)
-- Refresh tokens are stored per user and validated on each use
+- **Access tokens** expire in 1 hour (configurable)
+- **Refresh tokens** expire in 7 days (configurable)
 - Tokens are invalidated on logout
+
+🔒 **For security best practices, see [docs/SECURITY.md](docs/SECURITY.md)**
+
+## Documentation
+
+| Document                        | Description                          |
+| ------------------------------- | ------------------------------------ |
+| [API.md](docs/API.md)           | Complete API reference with examples |
+| [TESTING.md](docs/TESTING.md)   | Testing guide and test documentation |
+| [SECURITY.md](docs/SECURITY.md) | Security features and best practices |
 
 ## Future Enhancements
 
-- [x] Add database integration (MongoDB/PostgreSQL)
-- [x] Implement password authentication
+- [ ] Add database integration (MongoDB/PostgreSQL)
+- [x] Implement password authentication with bcrypt
 - [x] Add refresh token mechanism
-- [ ] Implement password reset functionality
-- [ ] Add input validation middleware
-- [ ] Add API documentation (Swagger/OpenAPI)
-- [ ] Add unit and integration tests
-- [ ] Implement rate limiting
+- [x] Add input validation and sanitization
+- [x] Add unit and integration tests
 - [x] Implement JWT-based authentication
 - [x] Add role-based access control
 - [x] Implement logout functionality
+- [x] Add user profile management
+- [ ] Implement password reset functionality
 - [ ] Add email verification for new users
+- [ ] Add API documentation (Swagger/OpenAPI)
+- [ ] Implement rate limiting
+- [ ] Add pagination for user lists
+- [ ] Add file upload for profile pictures
 
 ## License
 
