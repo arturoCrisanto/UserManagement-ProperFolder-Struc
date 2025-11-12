@@ -7,27 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Planned
 
-- Version control documentation
+- Database integration (MongoDB/PostgreSQL)
+- Password reset functionality
+- Email verification for new users
+- API documentation (Swagger/OpenAPI)
+- Pagination for user lists
+- File upload for profile pictures
 
 ## [1.0.0] - 2025-11-13
 
 ### Added
 
-- User registration and authentication
-- JWT-based authentication with access and refresh tokens
-- Role-based access control (RBAC)
-- Bcrypt password hashing
-- Token refresh mechanism
-- Secure logout functionality
-- User profile management (get/update)
-- Input validation and sanitization
-- Custom error handling
-- Structured logging
-- Standardized API responses
-- Rate limiting for API protection
-- Comprehensive test coverage (23 tests)
+- **Authentication & Authorization**
+
+  - User registration with email and password
+  - User login with JWT token generation
+  - JWT-based authentication with access tokens (1 hour expiry)
+  - Refresh token mechanism (7 days expiry)
+  - Secure logout functionality with token invalidation
+  - Role-based access control (Admin, User, Moderator roles)
+
+- **Security Features**
+
+  - Bcrypt password hashing with configurable salt rounds (default: 10)
+  - Password validation (minimum 8 characters, uppercase, lowercase, number)
+  - Input validation and sanitization using express-validator
+  - XSS protection through input sanitization
+  - Rate limiting for API protection:
+    - General API: 100 requests per 15 minutes
+    - Authentication endpoints: 5 attempts per 15 minutes
+    - Account creation: 3 accounts per hour
+  - Secure error handling without exposing sensitive data
+  - Environment variable protection (.env excluded from Git)
+
+- **User profile management** (get/update)
 
 ### Security
 
