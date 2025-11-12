@@ -8,6 +8,41 @@ Complete API reference for the Express.js User Management API.
 http://localhost:3000/api/users
 ```
 
+## Rate Limiting
+
+To prevent abuse and ensure fair usage, the API implements rate limiting:
+
+**General API Rate Limit:**
+
+- 100 requests per 15 minutes per IP address
+- Applies to all endpoints
+
+**Authentication Rate Limit:**
+
+- 5 requests per 15 minutes per IP address
+- Applies to `/register` and `/login` endpoints
+
+**Account Creation Rate Limit:**
+
+- 3 account creations per hour per IP address
+
+**Rate Limit Headers:**
+
+```
+RateLimit-Limit: 100
+RateLimit-Remaining: 99
+RateLimit-Reset: 1636723200
+```
+
+**Rate Limit Error (429 Too Many Requests):**
+
+```json
+{
+  "success": false,
+  "message": "Too many requests from this IP, please try again later."
+}
+```
+
 ## Authentication
 
 Most endpoints require JWT authentication. Include the access token in the Authorization header:
@@ -472,6 +507,7 @@ Authorization: Bearer <admin_access_token>
 | 403  | Forbidden             | Insufficient permissions          |
 | 404  | Not Found             | Resource doesn't exist            |
 | 409  | Conflict              | Duplicate resource (email exists) |
+| 429  | Too Many Requests     | Rate limit exceeded               |
 | 500  | Internal Server Error | Unexpected server errors          |
 
 ---

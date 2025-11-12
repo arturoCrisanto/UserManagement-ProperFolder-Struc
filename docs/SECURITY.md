@@ -35,10 +35,17 @@ Security features and best practices for the Express.js User Management API.
    - Unauthorized access prevention
 
 5. **Token Management**
+
    - Refresh tokens stored per user
    - Token invalidation on logout
    - Refresh token verification
    - Prevent token reuse after logout
+
+6. **Rate Limiting**
+   - Protection against brute force attacks
+   - API abuse prevention
+   - Configurable limits per endpoint type
+   - IP-based request tracking
 
 ---
 
@@ -379,26 +386,103 @@ app.use(helmet()); // Sets various security headers
 
 ## Rate Limiting
 
-### Implementation (Recommended)
+### ✅ Implemented
+
+The API includes comprehensive rate limiting to prevent abuse and brute force attacks.
+
+#### Configuration
+
+**Environment Variables:**
+
+```env
+RATE_LIMIT_WINDOW_MS=900000      # 15 minutes in milliseconds
+RATE_LIMIT_MAX_REQUESTS=100      # Max requests per window for general API
+AUTH_RATE_LIMIT_MAX=5            # Max requests per window for auth endpoints
+```
+
+#### Rate Limit Types
+
+**1. General API Limiter**
 
 ```javascript
-// Install express-rate-limit
-npm install express-rate-limit
+// Applied to all API routes
+- Window: 15 minutes (configurable)
+- Max Requests: 100 per window (configurable)
+- Scope: All endpoints
+```
 
-// In server.js or routes
-import rateLimit from 'express-rate-limit';
+**2. Authentication Limiter**
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,                   // 5 requests per window
-  message: 'Too many attempts, please try again later',
+```javascript
+// Applied to login and register endpoints
+- Window: 15 minutes (configurable)
+- Max Requests: 5 per window (configurable)
+- Scope: /login and /register
+```
+
+**3. Account Creation Limiter**
+
+```javascript
+// Applied to registration endpoint
+- Window: 1 hour
+- Max Requests: 3 per window
+- Scope: /register only
+```
+
+#### Implementation
+
+**middlewares/rateLimitMiddleware.js:**
+
+```javascript
+import rateLimit from "express-rate-limit";
+
+const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
+const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100;
+const authMaxRequests = parseInt(process.env.AUTH_RATE_LIMIT_MAX) || 5;
+
+// General API rate limiter
+export const apiLimiter = rateLimit({
+  windowMs,
+  max: maxRequests,
+  message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Apply to auth routes
-router.post('/register', authLimiter, validateRegistration, createUser);
-router.post('/login', authLimiter, validateLogin, loginUser);
+// Stricter limiter for authentication endpoints
+export const authLimiter = rateLimit({
+  windowMs,
+  max: authMaxRequests,
+  message: "Too many authentication attempts, please try again later.",
+});
+
+// Account creation limiter
+export const createAccountLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: "Too many accounts created from this IP, please try again later.",
+});
+```
+
+#### Response Headers
+
+When rate limiting is active, the API returns these headers:
+
+```
+RateLimit-Limit: 100
+RateLimit-Remaining: 99
+RateLimit-Reset: 1636723200
+```
+
+#### Rate Limit Exceeded Response
+
+**Status Code:** 429 Too Many Requests
+
+```json
+{
+  "success": false,
+  "message": "Too many requests from this IP, please try again later."
+}
 ```
 
 ---
@@ -462,11 +546,12 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
   - [ ] HTTP redirects to HTTPS
   - [ ] Security headers configured (helmet)
 
-- [ ] **Rate Limiting**
+- [x] **Rate Limiting**
 
-  - [ ] Authentication endpoints rate limited
-  - [ ] API endpoints rate limited
-  - [ ] DDoS protection configured
+  - [x] Authentication endpoints rate limited (5 attempts/15 min)
+  - [x] API endpoints rate limited (100 requests/15 min)
+  - [x] Account creation rate limited (3 accounts/hour)
+  - [ ] DDoS protection configured (external service)
 
 - [ ] **Error Handling**
 
@@ -532,9 +617,10 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
 **Prevention:**
 
-- Implement rate limiting
-- Account lockout after failed attempts
-- CAPTCHA for repeated failures
+- ✅ Rate limiting implemented (5 attempts per 15 minutes)
+- ✅ IP-based request tracking
+- ⚠️ Account lockout after failed attempts (recommended for production)
+- ⚠️ CAPTCHA for repeated failures (recommended for production)
 
 ---
 

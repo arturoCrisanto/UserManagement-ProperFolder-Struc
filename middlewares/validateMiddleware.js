@@ -14,9 +14,7 @@ export const validateRegistration = [
     .matches(/[A-Z]/)
     .withMessage("Password must contain uppercase letter")
     .matches(/[0-9]/)
-    .withMessage("Password must contain number")
-    .matches(/[@$!%*?&#]/)
-    .withMessage("Password must contain special character"),
+    .withMessage("Password must contain number"),
   body("username")
     .optional()
     .trim()
