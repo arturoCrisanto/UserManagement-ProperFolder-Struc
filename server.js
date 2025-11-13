@@ -4,6 +4,10 @@ dotenv.config();
 import express from "express";
 import userRoutes from "./routes/userRoutes.js";
 import { logger } from "./utils/logger.js";
+import { connectDatabase } from "./config/database.js";
+
+// Connect to MongoDB
+connectDatabase();
 
 const app = express();
 const PORT = process.env.PORT;

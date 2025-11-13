@@ -1,4 +1,4 @@
-import users from "../models/userModels.js";
+import User from "../models/userModels.js";
 import crypto from "crypto";
 import bycrypt from "bcrypt";
 import { asyncHandler } from "../utils/errorHandler.js";
@@ -26,9 +26,10 @@ import {
 
 // ==================== User CRUD Operations ====================
 
-export const getAllUsers = asyncHandler((req, res) => {
-  const allUsers = Object.values(users);
-  if (allUsers === 0) {
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const totalCount = await User.countDocuments();
+
+  if (totalCount === 0) {
     return sendErrorResponse(res, "No users found", 404);
   }
 
@@ -61,50 +62,65 @@ export const getAllUsers = asyncHandler((req, res) => {
   logger.debug(
     `Fetching users - Page: ${page}, Limit: ${limit}, SortBy: ${sortBy}, Order: ${order}`
   );
-  // Apply search filter if search query is provided
+
+  // Build query
+  let query = {};
   const searchQuery = req.query.search || null;
-  const searchFields = ["name", "email", "role"];
-  const filteredUsers = searchQuery
-    ? filterItems(allUsers, searchQuery, searchFields)
-    : allUsers;
 
-  // Paginate the filtered users
-  const { data: paginatedUsers, metadata } = paginate(filteredUsers, {
-    page,
-    limit,
-    sortBy,
-    order,
-  });
+  if (searchQuery) {
+    query.$or = [
+      { name: { $regex: searchQuery, $options: "i" } },
+      { email: { $regex: searchQuery, $options: "i" } },
+      { role: { $regex: searchQuery, $options: "i" } },
+    ];
+  }
 
-  // Add navigation properties to metadata
+  // Calculate skip value
+  const skip = (page - 1) * limit;
+
+  // Fetch users with pagination
+  const sortOrder = order === "asc" ? 1 : -1;
+  const users = await User.find(query)
+    .select("-password -refreshTokens")
+    .sort({ [sortBy]: sortOrder })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  const filteredCount = await User.countDocuments(query);
+  const totalPages = Math.ceil(filteredCount / limit);
+
+  // Create pagination metadata
   const paginationData = {
-    ...metadata,
-    hasNextPage: page < metadata.totalPages,
+    currentPage: page,
+    totalPages,
+    totalItems: filteredCount,
+    itemsPerPage: limit,
+    hasNextPage: page < totalPages,
     hasPreviousPage: page > 1,
-    nextPage: page < metadata.totalPages ? page + 1 : null,
+    nextPage: page < totalPages ? page + 1 : null,
     previousPage: page > 1 ? page - 1 : null,
   };
 
-  // Sanitize users (remove sensitive data)
-  const sanitizedUsers = paginatedUsers.map(sanitizeUser);
-  logger.info(
-    `Fetched ${sanitizedUsers.length} users (page ${page}, limit ${limit})`
-  );
+  logger.info(`Fetched ${users.length} users (page ${page}, limit ${limit})`);
   sendSuccessResponse(
     res,
     {
-      users: sanitizedUsers,
+      users,
       pagination: paginationData,
     },
     "Users retrieved successfully"
   );
 });
 
-export const getUserById = asyncHandler((req, res) => {
+export const getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const user = users.find((u) => u.id === id);
 
   logger.debug(`Searching for user with ID: ${id}`);
+
+  const user = await User.findById(id)
+    .select("-password -refreshTokens")
+    .lean();
 
   if (!user) {
     logger.error(`User with ID: ${id} not found`);
@@ -112,7 +128,7 @@ export const getUserById = asyncHandler((req, res) => {
   }
 
   logger.info(`User with ID: ${id} retrieved successfully`);
-  sendSuccessResponse(res, sanitizeUser(user), "User retrieved successfully");
+  sendSuccessResponse(res, user, "User retrieved successfully");
 });
 
 export const createUser = asyncHandler(async (req, res) => {
@@ -131,37 +147,41 @@ export const createUser = asyncHandler(async (req, res) => {
   }
 
   // Check if user already exists
-  if (users.find((u) => u.email === email)) {
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
     logger.error(`User creation failed: Email ${email} already exists`);
     return sendErrorResponse(res, "Email already exists", 409);
   }
 
   // Create new user
-  const newUser = {
-    id: crypto.randomUUID(),
+  const newUser = new User({
     name,
     email,
     password: await hashPassword(password),
     role: role || "User",
-    refreshTokens: [],
-  };
+  });
 
   // Generate tokens
-  const { accessToken, refreshToken } = generateTokenPair(newUser);
-  addRefreshToken(newUser, refreshToken);
+  const { accessToken, refreshToken } = generateTokenPair({
+    id: newUser._id,
+    email: newUser.email,
+    role: newUser.role,
+  });
 
-  // Add user to database
-  users.push(newUser);
+  newUser.refreshTokens.push(refreshToken);
+  await newUser.save();
 
-  logger.info(`New user created with ID: ${newUser.id}`);
-
-  // Remove password from response
-  const { password: _, ...userWithoutPassword } = newUser;
+  logger.info(`New user created with ID: ${newUser._id}`);
 
   sendSuccessResponse(
     res,
     {
-      user: sanitizeUser(userWithoutPassword),
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+      },
       accessToken,
       refreshToken,
     },
@@ -178,7 +198,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   logger.debug("User login attempt");
 
   // Find user by email
-  const user = users.find((u) => u.email === email);
+  const user = await User.findOne({ email });
   if (!user) {
     logger.error(`Login failed: User with email ${email} not found`);
     return sendErrorResponse(res, "Invalid email or password", 401);
@@ -190,9 +210,16 @@ export const loginUser = asyncHandler(async (req, res) => {
     logger.error(`Login failed: Invalid password for email ${email}`);
     return sendErrorResponse(res, "Invalid email or password", 401);
   }
+
   // Generate tokens
-  const { accessToken, refreshToken } = generateTokenPair(user);
-  addRefreshToken(user, refreshToken);
+  const { accessToken, refreshToken } = generateTokenPair({
+    id: user._id,
+    email: user.email,
+    role: user.role,
+  });
+
+  user.refreshTokens.push(refreshToken);
+  await user.save();
 
   logger.info(`User with email ${email} logged in successfully`);
 
@@ -210,17 +237,21 @@ export const logoutUser = asyncHandler(async (req, res) => {
   try {
     // Verify and decode refresh token
     const decoded = verifyRefreshToken(refreshToken);
-    const user = users.find((u) => u.id === decoded.id);
+    const user = await User.findById(decoded.id);
 
-    // Check if user exists and token is valid using hasValidRefreshToken helper
-    if (!user || !hasValidRefreshToken(user, refreshToken)) {
+    // Check if user exists and token is valid
+    if (!user || !user.refreshTokens.includes(refreshToken)) {
       logger.error("Invalid refresh token during logout");
       return sendErrorResponse(res, "Invalid refresh token", 401);
     }
-    // Remove refresh token using removeRefreshToken helper
-    removeRefreshToken(user, refreshToken);
 
-    logger.info(`User with ID: ${user.id} logged out successfully`);
+    // Remove refresh token
+    user.refreshTokens = user.refreshTokens.filter(
+      (token) => token !== refreshToken
+    );
+    await user.save();
+
+    logger.info(`User with ID: ${user._id} logged out successfully`);
     sendSuccessResponse(res, null, "Logout successful");
   } catch (error) {
     logger.error("Logout failed: " + error.message);
@@ -239,17 +270,22 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   try {
     // Verify and decode refresh token
     const decoded = verifyRefreshToken(refreshToken);
-    const user = users.find((u) => u.id === decoded.id);
+    const user = await User.findById(decoded.id);
 
-    // Check if user exists and token is valid using hasValidRefreshToken helper
-    if (!user || !hasValidRefreshToken(user, refreshToken)) {
+    // Check if user exists and token is valid
+    if (!user || !user.refreshTokens.includes(refreshToken)) {
       logger.error("Invalid refresh token");
       return sendErrorResponse(res, "Invalid refresh token", 401);
     }
-    // Generate new access token
-    const { accessToken } = generateTokenPair(user);
 
-    logger.info(`Access token refreshed for user ID: ${user.id}`);
+    // Generate new access token
+    const { accessToken } = generateTokenPair({
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    logger.info(`Access token refreshed for user ID: ${user._id}`);
 
     sendSuccessResponse(
       res,
@@ -269,7 +305,9 @@ export const getCurrentUserProfile = asyncHandler(async (req, res) => {
 
   logger.debug(`Fetching profile for user ID: ${userId}`);
 
-  const user = users.find((u) => u.id === userId);
+  const user = await User.findById(userId)
+    .select("-password -refreshTokens")
+    .lean();
 
   if (!user) {
     logger.error(`User with ID: ${userId} not found`);
@@ -277,11 +315,7 @@ export const getCurrentUserProfile = asyncHandler(async (req, res) => {
   }
 
   logger.info(`Profile retrieved successfully for user ID: ${userId}`);
-  sendSuccessResponse(
-    res,
-    sanitizeUser(user),
-    "Profile retrieved successfully"
-  );
+  sendSuccessResponse(res, user, "Profile retrieved successfully");
 });
 
 export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
@@ -290,7 +324,7 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
 
   logger.debug(`Updating profile for user ID: ${userId}`);
 
-  const user = users.find((u) => u.id === userId);
+  const user = await User.findById(userId);
 
   if (!user) {
     logger.error(`User with ID: ${userId} not found`);
@@ -299,7 +333,7 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
 
   // Check if email is being changed and if it already exists
   if (email && email !== user.email) {
-    const emailExists = users.find((u) => u.email === email && u.id !== userId);
+    const emailExists = await User.findOne({ email, _id: { $ne: userId } });
     if (emailExists) {
       logger.error(`Email ${email} already exists`);
       return sendErrorResponse(res, "Email already exists", 409);
@@ -312,6 +346,17 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
     user.name = name;
   }
 
+  await user.save();
+
   logger.info(`Profile updated successfully for user ID: ${userId}`);
-  sendSuccessResponse(res, sanitizeUser(user), "Profile updated successfully");
+  sendSuccessResponse(
+    res,
+    {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+    "Profile updated successfully"
+  );
 });
