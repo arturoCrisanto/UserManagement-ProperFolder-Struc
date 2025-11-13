@@ -12,6 +12,9 @@ connectDatabase();
 const app = express();
 const PORT = process.env.PORT;
 
+// Trust proxy - required for rate limiting behind reverse proxies (like Render)
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(express.json());
 
