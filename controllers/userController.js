@@ -132,6 +132,9 @@ export const getUserById = asyncHandler(async (req, res) => {
 });
 
 export const createUser = asyncHandler(async (req, res) => {
+  logger.info("createUser controller called");
+  logger.debug(`Request body: ${JSON.stringify(req.body)}`);
+
   const { name, email, role, password } = req.body;
 
   logger.debug("Creating a new user");

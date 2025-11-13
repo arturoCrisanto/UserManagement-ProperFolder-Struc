@@ -18,6 +18,12 @@ app.set("trust proxy", 1);
 // Middleware
 app.use(express.json());
 
+// Logging middleware to debug routes
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`);
+  next();
+});
+
 // Routes
 app.use("/api/users", userRoutes);
 
