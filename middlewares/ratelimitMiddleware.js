@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import rateLimit from "express-rate-limit";
 
 // General API rate limiter
