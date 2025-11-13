@@ -334,6 +334,7 @@ ISC
 ## Author
 
 Mark Ruzell Maray
+Backend Dev
 
 ## Version Control
 
@@ -366,6 +367,3 @@ For detailed changelog, see [CHANGELOG.md](CHANGELOG.md)
 ---
 
 **Note:** This is a development project. Additional security measures should be implemented before deploying to production.
-
-
-
