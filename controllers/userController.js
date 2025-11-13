@@ -17,16 +17,87 @@ import {
   hasValidRefreshToken,
   sanitizeUser,
 } from "../utils/authHelper.js";
+import {
+  paginate,
+  parsePaginationQuery,
+  filterItems,
+  validatePaginationParams,
+} from "../utils/pagination.js";
 
 // ==================== User CRUD Operations ====================
 
 export const getAllUsers = asyncHandler((req, res) => {
-  if (users.length === 0) {
+  const allUsers = Object.values(users);
+  if (allUsers === 0) {
     return sendErrorResponse(res, "No users found", 404);
   }
 
-  logger.info("Fetched all users");
-  sendSuccessResponse(res, users, "Users retrieved successfully");
+  // Validate raw query parameters first
+  const rawPage = req.query.page ? parseInt(req.query.page) : 1;
+  const rawLimit = req.query.limit ? parseInt(req.query.limit) : 10;
+
+  // Check if parsing resulted in invalid numbers
+  if (req.query.page && (isNaN(rawPage) || rawPage < 1)) {
+    logger.error(`Invalid page parameter: ${req.query.page}`);
+    return sendErrorResponse(
+      res,
+      "Page must be a positive integer greater than 0.",
+      400
+    );
+  }
+
+  if (req.query.limit && (isNaN(rawLimit) || rawLimit < 1 || rawLimit > 100)) {
+    logger.error(`Invalid limit parameter: ${req.query.limit}`);
+    return sendErrorResponse(
+      res,
+      "Limit must be a positive integer between 1 and 100.",
+      400
+    );
+  }
+
+  // Parse pagination query parameters
+  const { page, limit, sortBy, order } = parsePaginationQuery(req.query);
+
+  logger.debug(
+    `Fetching users - Page: ${page}, Limit: ${limit}, SortBy: ${sortBy}, Order: ${order}`
+  );
+  // Apply search filter if search query is provided
+  const searchQuery = req.query.search || null;
+  const searchFields = ["name", "email", "role"];
+  const filteredUsers = searchQuery
+    ? filterItems(allUsers, searchQuery, searchFields)
+    : allUsers;
+
+  // Paginate the filtered users
+  const { data: paginatedUsers, metadata } = paginate(filteredUsers, {
+    page,
+    limit,
+    sortBy,
+    order,
+  });
+
+  // Add navigation properties to metadata
+  const paginationData = {
+    ...metadata,
+    hasNextPage: page < metadata.totalPages,
+    hasPreviousPage: page > 1,
+    nextPage: page < metadata.totalPages ? page + 1 : null,
+    previousPage: page > 1 ? page - 1 : null,
+  };
+
+  // Sanitize users (remove sensitive data)
+  const sanitizedUsers = paginatedUsers.map(sanitizeUser);
+  logger.info(
+    `Fetched ${sanitizedUsers.length} users (page ${page}, limit ${limit})`
+  );
+  sendSuccessResponse(
+    res,
+    {
+      users: sanitizedUsers,
+      pagination: paginationData,
+    },
+    "Users retrieved successfully"
+  );
 });
 
 export const getUserById = asyncHandler((req, res) => {
@@ -41,7 +112,7 @@ export const getUserById = asyncHandler((req, res) => {
   }
 
   logger.info(`User with ID: ${id} retrieved successfully`);
-  sendSuccessResponse(res, user, "User retrieved successfully");
+  sendSuccessResponse(res, sanitizeUser(user), "User retrieved successfully");
 });
 
 export const createUser = asyncHandler(async (req, res) => {
