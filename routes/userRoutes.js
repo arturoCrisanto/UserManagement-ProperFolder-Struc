@@ -24,33 +24,61 @@ import {
 } from "../middlewares/rateLimitMiddleware.js";
 
 const router = express.Router();
-// Apply general API rate limiter to all routes
-router.use(apiRateLimiter);
 
 // Public routes (no authentication required)
 router.post(
   "/register",
+  apiRateLimiter,
   createAccountRateLimiter,
   validateRegistration,
   createUser
 );
-router.post("/login", authRateLimiter, validateLogin, loginUser);
-router.post("/refresh", validateRefreshToken, refreshAccessToken);
+router.post(
+  "/login",
+  apiRateLimiter,
+  authRateLimiter,
+  validateLogin,
+  loginUser
+);
+router.post(
+  "/refresh",
+  apiRateLimiter,
+  validateRefreshToken,
+  refreshAccessToken
+);
 
 // Protected routes (authentication required)
-router.post("/logout", authenticateToken, logoutUser);
+router.post("/logout", apiRateLimiter, authenticateToken, logoutUser);
 
 // Current user profile routes
-router.get("/profile", authenticateToken, getCurrentUserProfile);
+router.get(
+  "/profile",
+  apiRateLimiter,
+  authenticateToken,
+  getCurrentUserProfile
+);
 router.put(
   "/profile",
+  apiRateLimiter,
   authenticateToken,
   validateProfileUpdate,
   updateCurrentUserProfile
 );
 
 // Admin-only routes
-router.get("/all", authenticateToken, authorizeRole("Admin"), getAllUsers);
-router.get("/:id", authenticateToken, authorizeRole("Admin"), getUserById);
+router.get(
+  "/all",
+  apiRateLimiter,
+  authenticateToken,
+  authorizeRole("Admin"),
+  getAllUsers
+);
+router.get(
+  "/:id",
+  apiRateLimiter,
+  authenticateToken,
+  authorizeRole("Admin"),
+  getUserById
+);
 
 export default router;
