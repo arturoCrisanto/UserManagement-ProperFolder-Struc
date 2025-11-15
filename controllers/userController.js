@@ -1,6 +1,4 @@
 import User from "../models/userModels.js";
-import crypto from "crypto";
-import bycrypt from "bcrypt";
 import { asyncHandler } from "../utils/errorHandler.js";
 import { logger } from "../utils/logger.js";
 import {
@@ -18,9 +16,7 @@ import {
   sanitizeUser,
 } from "../utils/authHelper.js";
 import {
-  paginate,
   parsePaginationQuery,
-  filterItems,
   validatePaginationParams,
 } from "../utils/pagination.js";
 
@@ -33,31 +29,17 @@ export const getAllUsers = asyncHandler(async (req, res) => {
     return sendErrorResponse(res, "No users found", 404);
   }
 
-  // Validate raw query parameters first
-  const rawPage = req.query.page ? parseInt(req.query.page) : 1;
-  const rawLimit = req.query.limit ? parseInt(req.query.limit) : 10;
-
-  // Check if parsing resulted in invalid numbers
-  if (req.query.page && (isNaN(rawPage) || rawPage < 1)) {
-    logger.error(`Invalid page parameter: ${req.query.page}`);
-    return sendErrorResponse(
-      res,
-      "Page must be a positive integer greater than 0.",
-      400
-    );
-  }
-
-  if (req.query.limit && (isNaN(rawLimit) || rawLimit < 1 || rawLimit > 100)) {
-    logger.error(`Invalid limit parameter: ${req.query.limit}`);
-    return sendErrorResponse(
-      res,
-      "Limit must be a positive integer between 1 and 100.",
-      400
-    );
-  }
-
   // Parse pagination query parameters
   const { page, limit, sortBy, order } = parsePaginationQuery(req.query);
+
+  // Validate pagination parameters
+  const validation = validatePaginationParams(page, limit);
+  if (!validation.isValid) {
+    logger.error(
+      `Invalid pagination parameters: ${validation.errors.join(", ")}`
+    );
+    return sendErrorResponse(res, validation.errors.join(" "), 400);
+  }
 
   logger.debug(
     `Fetching users - Page: ${page}, Limit: ${limit}, SortBy: ${sortBy}, Order: ${order}`
@@ -67,8 +49,10 @@ export const getAllUsers = asyncHandler(async (req, res) => {
   let query = {};
   const searchQuery = req.query.search || null;
 
+  // Apply search filter if provided
   if (searchQuery) {
     query.$or = [
+      // Search in name, email, and role fields
       { name: { $regex: searchQuery, $options: "i" } },
       { email: { $regex: searchQuery, $options: "i" } },
       { role: { $regex: searchQuery, $options: "i" } },
@@ -171,7 +155,7 @@ export const createUser = asyncHandler(async (req, res) => {
     role: newUser.role,
   });
 
-  newUser.refreshTokens.push(refreshToken);
+  addRefreshToken(newUser, refreshToken);
   await newUser.save();
 
   logger.info(`New user created with ID: ${newUser._id}`);
@@ -221,7 +205,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     role: user.role,
   });
 
-  user.refreshTokens.push(refreshToken);
+  addRefreshToken(user, refreshToken);
   await user.save();
 
   logger.info(`User with email ${email} logged in successfully`);
@@ -243,15 +227,13 @@ export const logoutUser = asyncHandler(async (req, res) => {
     const user = await User.findById(decoded.id);
 
     // Check if user exists and token is valid
-    if (!user || !user.refreshTokens.includes(refreshToken)) {
+    if (!user || !hasValidRefreshToken(user, refreshToken)) {
       logger.error("Invalid refresh token during logout");
       return sendErrorResponse(res, "Invalid refresh token", 401);
     }
 
     // Remove refresh token
-    user.refreshTokens = user.refreshTokens.filter(
-      (token) => token !== refreshToken
-    );
+    removeRefreshToken(user, refreshToken);
     await user.save();
 
     logger.info(`User with ID: ${user._id} logged out successfully`);
@@ -276,7 +258,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     const user = await User.findById(decoded.id);
 
     // Check if user exists and token is valid
-    if (!user || !user.refreshTokens.includes(refreshToken)) {
+    if (!user || !hasValidRefreshToken(user, refreshToken)) {
       logger.error("Invalid refresh token");
       return sendErrorResponse(res, "Invalid refresh token", 401);
     }
@@ -308,17 +290,17 @@ export const getCurrentUserProfile = asyncHandler(async (req, res) => {
 
   logger.debug(`Fetching profile for user ID: ${userId}`);
 
-  const user = await User.findById(userId)
-    .select("-password -refreshTokens")
-    .lean();
+  const user = await User.findById(userId).lean();
 
   if (!user) {
     logger.error(`User with ID: ${userId} not found`);
     return sendErrorResponse(res, "User not found", 404);
   }
 
+  const sanitizedUser = sanitizeUser(user);
+
   logger.info(`Profile retrieved successfully for user ID: ${userId}`);
-  sendSuccessResponse(res, user, "Profile retrieved successfully");
+  sendSuccessResponse(res, sanitizedUser, "Profile retrieved successfully");
 });
 
 export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
@@ -351,15 +333,8 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
 
   await user.save();
 
+  const sanitizedUser = sanitizeUser(user.toObject());
+
   logger.info(`Profile updated successfully for user ID: ${userId}`);
-  sendSuccessResponse(
-    res,
-    {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
-    "Profile updated successfully"
-  );
+  sendSuccessResponse(res, sanitizedUser, "Profile updated successfully");
 });
